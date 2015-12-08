@@ -73,4 +73,9 @@ main = do
     user <- getUserName opts
     key <- getAccessKey opts
     ci <- mkConnectionInfo user key
-    print opts
+    case opts of
+        TunnelList _ _ _ -> do
+            tunnels <- getTunnelList ci
+            case tunnels of
+                Left x -> print x
+                Right ts -> mapM_ (\x -> getTunnel ci x >>= print) ts
