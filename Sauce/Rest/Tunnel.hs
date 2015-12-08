@@ -19,7 +19,6 @@ import Data.ByteString.Char8 (pack, unpack)
 import Data.Maybe (fromJust)
 import Network.HTTP.Conduit as C
 import Network.HTTP.Types.Status (statusCode, statusMessage)
-import System.Environment (lookupEnv)
 import Text.Printf (printf)
 
 type UserName = String
@@ -160,24 +159,3 @@ deleteTunnel ci tid = do
             return $ Right ()
         _   ->
             return $ Left (show (statusCode rstatus) ++ " " ++ unpack (statusMessage rstatus))
-
-getUserName :: IO UserName
-getUserName = do
-    x <- lookupEnv "SAUCE_USERNAME"
-    return $ fromJust x
-
-getAccessKey :: IO AccessKey
-getAccessKey = do
-    x <- lookupEnv "SAUCE_ACCESS_KEY"
-    return $ fromJust x
-
-main :: IO ()
-main = do
-    user <- getUserName
-    key <- getAccessKey
-    man <- C.newManager C.tlsManagerSettings
-    let ci = ConnectionInfo {userName=user, accessKey=key, connManager=man}
-    tunnels <- getTunnelList ci
-    case tunnels of
-        Left x -> print x
-        Right ts -> mapM_ (\x -> getTunnel ci x >>= print) ts
