@@ -7,6 +7,7 @@ module Tunnel (UserName,
                ConnectionInfo,
                TunnelMetadata,
                Tunnel,
+               mkConnectionInfo,
                getTunnel,
                deleteTunnel,
                getTunnelList) where
@@ -92,6 +93,11 @@ instance FromJSON Tunnel where
                            v .: "id" <*>
                            v .: "metadata"
     parseJSON _          = mzero
+
+mkConnectionInfo :: UserName -> AccessKey -> IO ConnectionInfo
+mkConnectionInfo user key = do
+    man <- C.newManager C.tlsManagerSettings
+    return $ ConnectionInfo user key man
 
 restUrl :: String
 restUrl = "https://saucelabs.com/rest/v1"
