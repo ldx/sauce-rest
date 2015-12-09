@@ -14,9 +14,10 @@ module Tunnel (UserName,
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
-import Data.Aeson (decode, eitherDecode, FromJSON, parseJSON, Value(..), (.:))
-import Data.ByteString.Char8 (pack, unpack)
-import Data.Maybe (fromJust)
+import Data.Aeson (decode, eitherDecode, encode, FromJSON, parseJSON, ToJSON, toJSON, Value(..), (.:), (.=), object)
+import Data.ByteString.Char8 as BS (pack, unpack)
+import qualified Data.ByteString.Lazy.Char8 as LBS (unpack)
+import Data.Maybe (fromJust, fromMaybe)
 import Network.HTTP.Conduit as C
 import Network.HTTP.Types.Status (statusCode, statusMessage)
 import Text.Printf (printf)
@@ -36,7 +37,7 @@ data TunnelMetadata = TunnelMetadata { hostname :: String
                                      , platform :: String
                                      , release :: String
                                      , nofile_limit :: Int
-                                     } deriving Show
+                                     }
 
 instance FromJSON TunnelMetadata where
     parseJSON (Object v) = TunnelMetadata <$>
@@ -46,6 +47,18 @@ instance FromJSON TunnelMetadata where
                            v .: "release" <*>
                            v .: "nofile_limit"
     parseJSON _          = mzero
+
+instance ToJSON TunnelMetadata where
+    toJSON (TunnelMetadata hostname git_version platform release nofile_limit) =
+        object [ "hostname" .= hostname
+               , "git_version" .= git_version
+               , "platform" .= platform
+               , "release" .= release
+               , "nofile_limit" .= nofile_limit
+               ]
+
+instance Show TunnelMetadata where
+    show a = LBS.unpack $ encode a
 
 data Tunnel = Tunnel { status :: String
                      , direct_domains :: Maybe [DomainName]
@@ -67,7 +80,7 @@ data Tunnel = Tunnel { status :: String
                      , no_ssl_bump_domains :: Maybe [DomainName]
                      , id :: TunnelId
                      , metadata :: Maybe TunnelMetadata
-                     } deriving Show
+                     }
 
 instance FromJSON Tunnel where
     parseJSON (Object v) = Tunnel <$>
@@ -93,6 +106,53 @@ instance FromJSON Tunnel where
                            v .: "metadata"
     parseJSON _          = mzero
 
+instance ToJSON Tunnel where
+    toJSON (Tunnel
+            status
+            direct_domains
+            vm_version
+            last_connected
+            shutdown_time
+            ssh_port
+            launch_time
+            user_shutdown
+            use_caching_proxy
+            creation_time
+            domain_names
+            shared_tunnel
+            tunnel_identifier
+            host
+            no_proxy_caching
+            owner
+            use_kgp
+            no_ssl_bump_domains
+            id
+            metadata) =
+        object [ "status" .= status
+               , "direct_domains" .= direct_domains
+               , "vm_version" .= vm_version
+               , "last_connected" .= last_connected
+               , "shutdown_time" .= shutdown_time
+               , "ssh_port" .= ssh_port
+               , "launch_time" .= launch_time
+               , "user_shutdown" .= user_shutdown
+               , "use_caching_proxy" .= use_caching_proxy
+               , "creation_time" .= creation_time
+               , "domain_names" .= domain_names
+               , "shared_tunnel" .= shared_tunnel
+               , "tunnel_identifier" .= tunnel_identifier
+               , "host" .= host
+               , "no_proxy_caching" .= no_proxy_caching
+               , "owner" .= owner
+               , "use_kgp" .= use_kgp
+               , "no_ssl_bump_domains" .= no_ssl_bump_domains
+               , "id" .= id
+               , "metadata" .= metadata
+               ]
+
+instance Show Tunnel where
+    show a = LBS.unpack $ encode a
+
 mkConnectionInfo :: UserName -> AccessKey -> IO ConnectionInfo
 mkConnectionInfo user key = do
     man <- C.newManager C.tlsManagerSettings
@@ -109,8 +169,8 @@ createTunnelRestRequest :: ConnectionInfo -> Maybe TunnelId -> C.Request
 createTunnelRestRequest ci tid =
     applyBasicAuth user key $ fromJust $ C.parseUrl url
     where url  = createTunnelRestUrl ci tid
-          user = pack $ userName ci
-          key  = pack $ accessKey ci
+          user = BS.pack $ userName ci
+          key  = BS.pack $ accessKey ci
 
 getTunnel :: ConnectionInfo -> TunnelId -> IO (Either String Tunnel)
 getTunnel ci tid = do
@@ -126,7 +186,7 @@ getTunnel ci tid = do
                 Right x  -> return $ Right x
                 Left e -> return $ Left ("Invalid response " ++ e)
         _   ->
-            return $ Left (show (statusCode rstatus) ++ " " ++ unpack (statusMessage rstatus))
+            return $ Left (show (statusCode rstatus) ++ " " ++ BS.unpack (statusMessage rstatus))
 
 getTunnelList :: ConnectionInfo -> IO (Either String [TunnelId])
 getTunnelList ci = do
@@ -142,7 +202,7 @@ getTunnelList ci = do
                 Just x  -> return $ Right x
                 Nothing -> return $ Left ("Invalid response " ++ show json)
         _   ->
-            return $ Left (show (statusCode rstatus) ++ " " ++ unpack (statusMessage rstatus))
+            return $ Left (show (statusCode rstatus) ++ " " ++ BS.unpack (statusMessage rstatus))
 
 deleteTunnel :: ConnectionInfo -> TunnelId -> IO (Either String ())
 deleteTunnel ci tid = do
@@ -158,4 +218,4 @@ deleteTunnel ci tid = do
             print json
             return $ Right ()
         _   ->
-            return $ Left (show (statusCode rstatus) ++ " " ++ unpack (statusMessage rstatus))
+            return $ Left (show (statusCode rstatus) ++ " " ++ BS.unpack (statusMessage rstatus))
