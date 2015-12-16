@@ -51,7 +51,7 @@ isInvalid :: String -> Bool
 isInvalid x = "invalid " == take 8 x
 
 getUserName :: SauceRest -> IO UserName
-getUserName s = do
+getUserName s =
     case isInvalid user of
         False -> return user
         True  -> do
@@ -60,7 +60,7 @@ getUserName s = do
     where user = username s
 
 getAccessKey :: SauceRest -> IO AccessKey
-getAccessKey s = do
+getAccessKey s =
     case isInvalid key of
         False -> return key
         True  -> do
@@ -74,7 +74,7 @@ main = do
     key <- getAccessKey opts
     ci <- mkConnectionInfo user key
     case opts of
-        TunnelList _ _ _ -> do
+        TunnelList{} -> do
             tunnels <- getTunnelList ci
             case tunnels of
                 Left x -> print x
