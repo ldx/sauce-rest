@@ -83,7 +83,7 @@ main = do
             result <- deleteTunnel ci tid
             case result of
                 Left x  -> print x
-                Right _ -> return ()
+                Right r -> print r
         TunnelShow tid _ _ -> do
             result <- getTunnel ci tid
             case result of
