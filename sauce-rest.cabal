@@ -20,7 +20,7 @@ executable sauce-rest
   main-is:             Main.hs
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.7 && <4.8,
+  build-depends:       base,
                        aeson,
                        bytestring,
                        cmdargs,
