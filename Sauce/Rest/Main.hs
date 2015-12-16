@@ -77,5 +77,15 @@ main = do
         TunnelList{} -> do
             tunnels <- getTunnelList ci
             case tunnels of
-                Left x -> print x
-                Right ts -> mapM_ (\x -> getTunnel ci x >>= print) ts
+                Left x   -> print x
+                Right ts -> print ts
+        TunnelDelete tid _ _ -> do
+            result <- deleteTunnel ci tid
+            case result of
+                Left x  -> print x
+                Right _ -> return ()
+        TunnelShow tid _ _ -> do
+            result <- getTunnel ci tid
+            case result of
+                Left x  -> print x
+                Right t -> print t
