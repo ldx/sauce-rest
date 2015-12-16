@@ -153,6 +153,28 @@ instance ToJSON Tunnel where
 instance Show Tunnel where
     show a = LBS.unpack $ encode a
 
+data TunnelDeleteReply = TunnelDeleteReply { jobs_running :: Int
+                                           , result :: Bool
+                                           , id_ :: String
+                                           }
+
+instance FromJSON TunnelDeleteReply where
+    parseJSON (Object v) = TunnelDeleteReply <$>
+                           v .: "jobs_running" <*>
+                           v .: "result" <*>
+                           v .: "id"
+    parseJSON _          = mzero
+
+instance ToJSON TunnelDeleteReply where
+    toJSON (TunnelDeleteReply jobs_running result id_) =
+        object [ "jobs_running" .= jobs_running
+               , "result" .= result
+               , "id" .= id_
+               ]
+
+instance Show TunnelDeleteReply where
+    show a = LBS.unpack $ encode a
+
 mkConnectionInfo :: UserName -> AccessKey -> IO ConnectionInfo
 mkConnectionInfo user key = do
     man <- C.newManager C.tlsManagerSettings
@@ -204,7 +226,7 @@ getTunnelList ci = do
         _   ->
             return $ Left (show (statusCode rstatus) ++ " " ++ BS.unpack (statusMessage rstatus))
 
-deleteTunnel :: ConnectionInfo -> TunnelId -> IO (Either String ())
+deleteTunnel :: ConnectionInfo -> TunnelId -> IO (Either String TunnelDeleteReply)
 deleteTunnel ci tid = do
     let req = createTunnelRestRequest ci (Just tid)
     let request = req { checkStatus = \_ _ _ -> Nothing
@@ -215,7 +237,9 @@ deleteTunnel ci tid = do
     case statusCode rstatus of
         200 -> do
             let json = C.responseBody res
-            print json
-            return $ Right ()
+            let reply = eitherDecode json :: Either String TunnelDeleteReply
+            case reply of
+                Right x -> return $ Right x
+                Left e  -> return $ Left ("Invalid response " ++ e)
         _   ->
             return $ Left (show (statusCode rstatus) ++ " " ++ BS.unpack (statusMessage rstatus))
